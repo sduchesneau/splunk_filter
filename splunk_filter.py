@@ -3,8 +3,8 @@
 import ldap
 import getopt
 import sys, os
-from cf import *
-from logger import *
+from cftools.cf import CF
+from cftools.logger import logger
 from ConfigParser import ConfigParser
 
 SUCCESS     = "--status=success"
