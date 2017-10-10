@@ -64,7 +64,7 @@ def getUserInfo( infoIn ):
     
             try:
                 usr = cf.search_user(infoIn['username'])
-                outStr = SUCCESS + ' --userInfo=;' + usr['entity']['username'] + ';;admin'
+                outStr = SUCCESS + ' --userInfo=;' + usr['entity']['username'] + ';;user'
 
                 print outStr
             except:
