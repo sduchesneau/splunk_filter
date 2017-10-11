@@ -7,14 +7,11 @@ import time
 import random
 import hashlib
 import socket
-from ConfigParser import ConfigParser
+from config import config
 
 class logger(object):
 
     def __init__(self):
-
-        self.config = ConfigParser()
-        self.config.read('splunk_filter.conf')
         self.transaction_id = self.make_transid()
 
 
@@ -23,7 +20,7 @@ class logger(object):
         logger = logging.getLogger(name)
         logger.setLevel(logging.DEBUG)
 
-        LOG_FILENAME = os.path.join(self.config.get('splunk', 'log_dir'), 'splunk_filter.log')
+        LOG_FILENAME = os.path.join(config.splunk.log_dir, 'splunk_filter.log')
 
         handler = logging_handler.RotatingFileHandler(LOG_FILENAME, maxBytes=102400, backupCount=5)
         log_format = logging.Formatter("%%(asctime)s [%%(levelname)s] - %%(module)s %%(message)s transaction_id='%s'" % ( self.transaction_id ) )

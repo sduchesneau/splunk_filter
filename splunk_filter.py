@@ -5,7 +5,7 @@ import getopt
 import sys, os
 from cftools.cf import CF
 from cftools.logger import logger
-from ConfigParser import ConfigParser
+from config import config
 
 SUCCESS     = "--status=success"
 FAILED      = "--status=fail"
@@ -14,15 +14,15 @@ def userLogin( info ):
     
     found_user = False
 
-    BIND_DN = 'cn=' + info['username'] + ',' + LDAP_USER_ROOT
+    BIND_DN = 'cn=' + info['username'] + ',' + config.ldap.LDAP_USER_ROOT
     BIND_PASS = info['password']
 
     logger.info('userLogin - message="User logging in with domain and username"  username="%s"' % ( BIND_DN ))
-    logger.info('userLogin - message="LDAP server %s"' % ( LDAP_SERVER ))
+    logger.info('userLogin - message="LDAP server %s"' % ( config.ldap.LDAP_SERVER ))
 
     try:
 
-        ldap_connection = ldap.initialize(LDAP_SERVER)   
+        ldap_connection = ldap.initialize(config.ldap.LDAP_SERVER)   
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         ldap.set_option(ldap.OPT_X_TLS,ldap.OPT_X_TLS_DEMAND)
         ldap.set_option( ldap.OPT_X_TLS_DEMAND, True )
@@ -41,25 +41,25 @@ def userLogin( info ):
 
     if found_user:
         print SUCCESS
-        logger.info('message="Login Success" type="login" outcome="success" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, SUCCESS, LDAP_SERVER ))
+        logger.info('message="Login Success" type="login" outcome="success" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, SUCCESS, config.ldap.LDAP_SERVER ))
 
     else:
         print FAILED
-        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, LDAP_SERVER ) )
+        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.LDAP_SERVER ) )
 
 def getUserInfo( infoIn ):
     
     try:
-        cf = CF(CF_URL)
+        cf = CF(config.cloudfoundry.CF_URL)
     except Exception, e:
         print(e)
-        logger.info('getUserInfo - message="unable to call PCF", curl="%s"' % ( CF_URL ))
+        logger.info('getUserInfo - message="unable to call PCF", curl="%s"' % ( config.cloudfoundry.CF_URL ))
     else:
         try:
-            cf.login(admin_user, admin_password)
+            cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
         except Exception, e:
             print(e)
-            logger.info('getUserInfo - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( CF_URL, admin_user ))
+            logger.info('getUserInfo - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.CF_URL, config.cloudfoundry.admin_user ))
         else:
     
             try:
@@ -68,7 +68,7 @@ def getUserInfo( infoIn ):
 
                 print outStr
             except:
-                logger.info('getUserInfo - message="Error when searching user", curl="%s" - username="%s"' % ( CF_URL, infoIn['username'] ))
+                logger.info('getUserInfo - message="Error when searching user", curl="%s" - username="%s"' % ( config.cloudfoundry.CF_URL, infoIn['username'] ))
                 print FAILED
 
 def getUsers( infoIn ):
@@ -78,13 +78,13 @@ def getUsers( infoIn ):
 def getSearchFilter(infoIn):
 
     try:
-        cf = CF(CF_URL)
-        cf.login(admin_user, admin_password)
+        cf = CF(config.cloudfoundry.CF_URL)
+        cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
 
         usr = cf.search_user(infoIn['username'])
         
     except:
-        logger.info('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( CF_URL, admin_user ))
+        logger.info('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.CF_URL, config.cloudfoundry.admin_user ))
         print FAILED
 
     else:
@@ -92,7 +92,7 @@ def getSearchFilter(infoIn):
             orgs = cf.search_orgs(usr['entity']['organizations_url'])
 
             if len(orgs) > 1:
-                indexFilter = '--search_filter=index=pcf_syslog '
+                indexFilter = '--search_filter=index=pcf_syslog ' % config.splunk.index_name
                 filter = ''
                 for org in orgs:
                    
@@ -140,27 +140,11 @@ if __name__ == "__main__":
     logging = logger()
     logger = logging.get_logger('ldap_auth')
 
-    config = ConfigParser()
-    config.read('splunk_filter.conf')
-
-    CF_URL = config.get('cloudfoundry', 'CF_URL')
-    admin_user = config.get('cloudfoundry', 'admin_user')
-    admin_password = config.get('cloudfoundry', 'admin_password')
-
-    LDAP_SERVER = config.get('ldap', 'LDAP_SERVER')
-    LDAP_USER_ROOT = config.get('ldap', 'LDAP_USER_ROOT')
 
     callname = sys.argv[1]
 
     dictin = readinputs()
-
-    # find out if we are dealing with domain\username or just a username
-    usertype = checkusername(dictin)
-  
-    if usertype == "domain_user":
-        DOMAIN_USER = True
-     
-    logger.info('method "%s" called' % (callname))
+    #usertype = checkusername(dictin)
 
     if callname == "userLogin": 
         userLogin( dictin )
