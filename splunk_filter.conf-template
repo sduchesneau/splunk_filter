@@ -9,4 +9,5 @@ LDAP_USER_ROOT:
 
 [splunk]
 log_dir=
-index_name=pcf_syslog
+app_ndex_name=
+system_index_name=

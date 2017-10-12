@@ -117,18 +117,33 @@ def getSearchFilter(infoIn):
             orgs = cf.search_orgs(usr['entity']['organizations_url'])
 
             if len(orgs) > 1:
-                indexFilter = '--search_filter=index=pcf_syslog ' % config.splunk.index_name
+                appIndexFilter = 'index='+ config.splunk.app_index_name + ' '
+                sysIndexFilter = 'index='+ config.splunk.system_index_name
+                
                 filter = ''
+
+                sysLogFilter = False
+
                 for org in orgs:
                    
+                    '''
+                    If user is in Infra-org, add syslogs filter
+                    ''' 
+                    if (org['entity']['name'] == 'Infra-org'):
+                        sysLogFilter = True
+
                     currentFilter = 'host='  + org['entity']['name'] + '.*'
 
                     if filter != '':
                         filter += ' OR '
 
                     filter+= currentFilter
+                    
+                allFilter = '(' + appIndexFilter + filter + ')'
+                if sysLogFilter:
+                    allFilter += ' OR ' + '(' + sysIndexFilter + ')'
 
-                print SUCCESS + ' ' + indexFilter + filter
+                print SUCCESS + ' --search_filter=' + allFilter
             else:
                 logger.info('getSearchFilter - message="no PCF organization found for", username="%s"' % ( infoIn['username'] ))
                 print FAILED    
