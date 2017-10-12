@@ -1,4 +1,4 @@
-#!/usr/bin/python2.7
+#!/usr/bin/env python
 
 import ldap
 import getopt
@@ -14,15 +14,15 @@ def userLogin( info ):
     
     found_user = False
 
-    BIND_DN = 'cn=' + info['username'] + ',' + config.ldap.LDAP_USER_ROOT
+    BIND_DN = 'cn=' + info['username'] + ',' + config.ldap.ldap_user_root
     BIND_PASS = info['password']
 
     logger.info('userLogin - message="User logging in with domain and username"  username="%s"' % ( BIND_DN ))
-    logger.info('userLogin - message="LDAP server %s"' % ( config.ldap.LDAP_SERVER ))
+    logger.info('userLogin - message="LDAP server %s"' % ( config.ldap.ldap_server ))
 
     try:
 
-        ldap_connection = ldap.initialize(config.ldap.LDAP_SERVER)   
+        ldap_connection = ldap.initialize(config.ldap.ldap_server)   
         ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
         ldap.set_option(ldap.OPT_X_TLS,ldap.OPT_X_TLS_DEMAND)
         ldap.set_option( ldap.OPT_X_TLS_DEMAND, True )
@@ -41,35 +41,60 @@ def userLogin( info ):
 
     if found_user:
         print SUCCESS
-        logger.info('message="Login Success" type="login" outcome="success" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, SUCCESS, config.ldap.LDAP_SERVER ))
+        logger.info('message="Login Success" type="login" outcome="success" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, SUCCESS, config.ldap.ldap_server ))
 
     else:
         print FAILED
-        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.LDAP_SERVER ) )
+        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.ldap_server ) )
 
 def getUserInfo( infoIn ):
     
     try:
-        cf = CF(config.cloudfoundry.CF_URL)
+        cf = CF(config.cloudfoundry.cf_url)
     except Exception, e:
-        print(e)
-        logger.info('getUserInfo - message="unable to call PCF", curl="%s"' % ( config.cloudfoundry.CF_URL ))
-    else:
-        try:
-            cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
-        except Exception, e:
-            print(e)
-            logger.info('getUserInfo - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.CF_URL, config.cloudfoundry.admin_user ))
-        else:
+        logger.error('getUserInfo - message="unable to call PCF", curl="%s", exception=%s' % ( config.cloudfoundry.cf_url,e ))
+        return
     
-            try:
-                usr = cf.search_user(infoIn['username'])
-                outStr = SUCCESS + ' --userInfo=;' + usr['entity']['username'] + ';;user'
+    try:
+        cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
+    except Exception, e:
+        logger.error('getUserInfo - message="invalid PCF credentials", curl="%s" - admin_user="%s", exception=%s' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user, e ))
+        return
 
-                print outStr
-            except:
-                logger.info('getUserInfo - message="Error when searching user", curl="%s" - username="%s"' % ( config.cloudfoundry.CF_URL, infoIn['username'] ))
-                print FAILED
+    try:
+        usr = cf.search_user(infoIn['username'])
+        if usr == None:
+            raise Exception("No User Found")
+        user_role = 'user'
+        if isOrgManager(infoIn['username'], cf):
+            logger.debug('Setting %s to power user' % infoIn['username'])
+            user_role = 'power'
+        outStr = SUCCESS + ' --userInfo=;' + usr['entity']['username'] + ';;' + user_role
+
+        print outStr
+    except Exception, e:
+        logger.error('getUserInfo - message="Error when searching user", curl="%s" - username="%s", exception=%s' % ( config.cloudfoundry.cf_url, infoIn['username'], e ))
+        print FAILED
+
+
+def isOrgManager(user_name, cf):
+    try:
+        usr = cf.search_user(user_name)
+        if usr == None:
+            return False
+        managed_orgs = cf._search(usr.get('entity').get('managed_organizations_url'))
+        if managed_orgs == None:
+            return False
+        active_managed_orgs = [org for org in managed_orgs 
+                               if org.get('entity').get('status') == u'active']
+        if len(active_managed_orgs) > 0:
+            return True
+
+        return False
+    except Exception, e:
+        logger.error(e)
+        logger.error('isOrgManager - message="Error when getting managed organizations", curl="%s" - username="%s"' % ( config.cloudfoundry.cf_url, user_name ))
+        return False
 
 def getUsers( infoIn ):
         
@@ -78,13 +103,13 @@ def getUsers( infoIn ):
 def getSearchFilter(infoIn):
 
     try:
-        cf = CF(config.cloudfoundry.CF_URL)
+        cf = CF(config.cloudfoundry.cf_url)
         cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
 
         usr = cf.search_user(infoIn['username'])
         
     except:
-        logger.info('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.CF_URL, config.cloudfoundry.admin_user ))
+        logger.info('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user ))
         print FAILED
 
     else:
