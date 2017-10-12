@@ -9,5 +9,5 @@ LDAP_USER_ROOT:
 
 [splunk]
 log_dir=
-app_ndex_name=
+app_index_name=
 system_index_name=
