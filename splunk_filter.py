@@ -152,6 +152,8 @@ def getSearchFilter(infoIn):
             allFilter = '(' + appIndexFilter + filter + ')'
             if sysLogFilter:
                 allFilter += ' OR ' + '(' + sysIndexFilter + ')'
+            else:
+                allFilter += ' OR ' + '(' + config.splunk.service_search_filter + ')'
 
             print SUCCESS + ' --search_filter=' + allFilter
         else:
