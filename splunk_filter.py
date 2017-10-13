@@ -101,7 +101,7 @@ def getUsers( infoIn ):
     print SUCCESS + ' --userInfo=;admin;;admin'
 
 def getSearchFilter(infoIn):
-    if ! infoIn.has_key('username'):
+    if not infoIn.has_key('username'):
         logger.error('getSearchFilter - called without username param')
         print FAILED
         return
@@ -119,14 +119,14 @@ def getSearchFilter(infoIn):
         if usr == None:
             raise Exception
     except:
-        logger.error('getSearchFilter - message="Cannot find user in PCF", username="%s"' % infoIn['username'] ))
+        logger.error('getSearchFilter - message="Cannot find user in PCF", username="%s"' % infoIn['username'] )
         print FAILED
         return
     
     try:
         orgs = cf.search_orgs(usr['entity']['organizations_url'])
 
-        if len(orgs) > 1:
+        if len(orgs) >= 1:
             appIndexFilter = 'index='+ config.splunk.app_index_name + ' '
             sysIndexFilter = 'index='+ config.splunk.system_index_name
             
