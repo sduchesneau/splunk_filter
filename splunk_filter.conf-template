@@ -11,3 +11,4 @@ LDAP_USER_ROOT:
 log_dir=
 app_index_name=
 system_index_name=
+service_search_filter:

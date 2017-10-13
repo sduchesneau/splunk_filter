@@ -45,7 +45,7 @@ def userLogin( info ):
 
     else:
         print FAILED
-        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.ldap_server ) )
+        logger.error('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.ldap_server ) )
 
 def getUserInfo( infoIn ):
     
@@ -101,56 +101,69 @@ def getUsers( infoIn ):
     print SUCCESS + ' --userInfo=;admin;;admin'
 
 def getSearchFilter(infoIn):
+    if not infoIn.has_key('username'):
+        logger.error('getSearchFilter - called without username param')
+        print FAILED
+        return
 
     try:
         cf = CF(config.cloudfoundry.cf_url)
         cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
-
-        usr = cf.search_user(infoIn['username'])
-        
-    except:
-        logger.info('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s"' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user ))
+    except Exception, e:
+        logger.error('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s", exception=%s' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user, e ))
         print FAILED
+        return
+    
+    try:
+        usr = cf.search_user(infoIn['username'])
+        if usr == None:
+            raise Exception
+    except:
+        logger.error('getSearchFilter - message="Cannot find user in PCF", username="%s"' % infoIn['username'] )
+        print FAILED
+        return
+    
+    try:
+        orgs = cf.search_orgs(usr['entity']['organizations_url'])
 
-    else:
-        try:
-            orgs = cf.search_orgs(usr['entity']['organizations_url'])
-
-            if len(orgs) > 1:
-                appIndexFilter = 'index='+ config.splunk.app_index_name + ' '
-                sysIndexFilter = 'index='+ config.splunk.system_index_name
-                
-                filter = ''
-
-                sysLogFilter = False
-
-                for org in orgs:
-                   
-                    '''
-                    If user is in Infra-org, add syslogs filter
-                    ''' 
-                    if (org['entity']['name'] == 'Infra-org'):
-                        sysLogFilter = True
-
-                    currentFilter = 'host='  + org['entity']['name'] + '.*'
-
-                    if filter != '':
-                        filter += ' OR '
-
-                    filter+= currentFilter
-                    
-                allFilter = '(' + appIndexFilter + filter + ')'
-                if sysLogFilter:
-                    allFilter += ' OR ' + '(' + sysIndexFilter + ')'
-
-                print SUCCESS + ' --search_filter=' + allFilter
-            else:
-                logger.info('getSearchFilter - message="no PCF organization found for", username="%s"' % ( infoIn['username'] ))
-                print FAILED    
-        except:
+        if len(orgs) >= 1:
+            appIndexFilter = 'index='+ config.splunk.app_index_name + ' '
+            sysIndexFilter = 'index='+ config.splunk.system_index_name
             
-            logger.info('getSearchFilter - message="method being called for an invalid user", username="%s"' % ( infoIn['username'] ))
-            print FAILED
+            filter = ''
+
+            sysLogFilter = False
+
+            for org in orgs:
+                
+                '''
+                If user is in Infra-org, add syslogs filter
+                ''' 
+                if (org['entity']['name'] == 'Infra-org'):
+                    sysLogFilter = True
+
+                currentFilter = 'host='  + org['entity']['name'] + '.*'
+
+                if filter != '':
+                    filter += ' OR '
+
+                filter+= currentFilter
+                
+            allFilter = '(' + appIndexFilter + filter + ')'
+            if sysLogFilter:
+                allFilter += ' OR ' + '(' + sysIndexFilter + ')'
+            else:
+                allFilter += ' OR ' + '(' + config.splunk.service_search_filter + ')'
+
+            logger.info('filter applyed for user %s:"%s"' % (infoIn['username'], allFilter))
+            print SUCCESS + ' --search_filter=' + allFilter
+        else:
+            logger.error('getSearchFilter - message="no PCF organization found for", username="%s"' % ( infoIn['username'] ))
+            print FAILED    
+    except:
+        
+        logger.error('getSearchFilter - message="method being called for an invalid user", username="%s"' % ( infoIn['username'] ))
+        print FAILED
 
 def readinputs():
     
