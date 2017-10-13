@@ -45,7 +45,7 @@ def userLogin( info ):
 
     else:
         print FAILED
-        logger.info('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.ldap_server ) )
+        logger.error('message="Login Failure" type="login" outcome="failure" user="%s" script_return="%s" domain_controller="%s"' % ( BIND_DN, FAILED, config.ldap.ldap_server ) )
 
 def getUserInfo( infoIn ):
     
@@ -110,7 +110,7 @@ def getSearchFilter(infoIn):
         cf = CF(config.cloudfoundry.cf_url)
         cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
     except Exception, e:
-        logger.error('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s", exception=' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user, e ))
+        logger.error('getSearchFilter - message="invalid PCF credentials", curl="%s" - admin_user="%s", exception=%s' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user, e ))
         print FAILED
         return
     
@@ -155,6 +155,7 @@ def getSearchFilter(infoIn):
             else:
                 allFilter += ' OR ' + '(' + config.splunk.service_search_filter + ')'
 
+            logger.info('filter applyed for user %s:"%s"' % (infoIn['username'], allFilter))
             print SUCCESS + ' --search_filter=' + allFilter
         else:
             logger.error('getSearchFilter - message="no PCF organization found for", username="%s"' % ( infoIn['username'] ))
