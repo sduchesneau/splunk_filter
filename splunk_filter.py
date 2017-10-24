@@ -67,8 +67,8 @@ def getUserInfo( infoIn ):
             raise Exception("No User Found")
         user_role = 'user'
         if isOrgManager(infoIn['username'], cf):
-            logger.debug('Setting %s to power user' % infoIn['username'])
-            user_role = 'power'
+            logger.debug('Setting %s to %s' % (infoIn['username'], config.splunk.org_manager_role))
+            user_role = config.splunk.org_manager_role
         outStr = SUCCESS + ' --userInfo=;' + usr['entity']['username'] + ';;' + user_role
 
         print outStr

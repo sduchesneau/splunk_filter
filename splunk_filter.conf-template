@@ -1,14 +1,15 @@
 [cloudfoundry]
-CF_URL=
-admin_user=
+CF_URL=          #URL of cloudfoundry
+admin_user=      #user with admin read rights
 admin_password=
 
 [ldap]
-LDAP_SERVER=
-LDAP_USER_ROOT:
+LDAP_SERVER=     #Prefix with ldap:// or ldaps://
+LDAP_USER_ROOT:  #search base (ex: ou=users,dc=example,dc=com)
 
 [splunk]
 log_dir=
-app_index_name=
-system_index_name=
-service_search_filter:
+app_index_name=         #splunk index for cf application logs
+system_index_name=      #splunk index for everything else
+service_search_filter=  #splunk search filter expression to restrict system index access to CF services
+org_manager_role=       #splunkrole to give people who are org manager in CF (ex: power)
