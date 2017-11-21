@@ -2,6 +2,7 @@
 CF_URL=          #URL of cloudfoundry
 admin_user=      #user with admin read rights
 admin_password=
+users_regex=^[a-zA-Z0-9-_]+$
 
 [ldap]
 LDAP_SERVER=     #Prefix with ldap:// or ldaps://

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+import re
 import ldap
 import getopt
 import sys, os
@@ -98,7 +99,36 @@ def isOrgManager(user_name, cf):
 
 def getUsers( infoIn ):
         
-    print SUCCESS + ' --userInfo=;admin;;admin'
+    try:
+        cf = CF(config.cloudfoundry.cf_url)
+    except Exception, e:
+        logger.error('getUserInfo - message="unable to call PCF", curl="%s", exception=%s' % ( config.cloudfoundry.cf_url,e ))
+        return
+    
+    try:
+        cf.login(config.cloudfoundry.admin_user, config.cloudfoundry.admin_password)
+    except Exception, e:
+        logger.error('getUserInfo - message="invalid PCF credentials", curl="%s" - admin_user="%s", exception=%s' % ( config.cloudfoundry.cf_url, config.cloudfoundry.admin_user, e ))
+        return
+
+    results = cf.list_users()
+    try:
+        if results['total_results'] > 0:
+            users=[r['entity']['username'] for r in results['resources'] if r['entity'].has_key('username') and r['entity']['active'] == True]
+    except KeyError:
+        print FAILED
+        return
+
+    try:
+        if len(config.cloudfoundry.users_regex) > 0:
+            users = [u for u in users if re.match(config.cloudfoundry.users_regex, u)]
+    except:
+        pass
+
+    answer_string = SUCCESS
+    for u in users:
+        answer_string += " --userInfo=;%s;;user" % u
+    print answer_string
 
 def getSearchFilter(infoIn):
     if not infoIn.has_key('username'):

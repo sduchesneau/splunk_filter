@@ -519,6 +519,15 @@ class CF(object):
                 return True
         return False
 
+    def list_users(self):
+        search = {}
+        try:
+            url = self.api_url + self.users_url
+            return self._get(url)
+        except e:
+            return None
+
+
     def search_user(self, name):
         # find by name 
         search = {
